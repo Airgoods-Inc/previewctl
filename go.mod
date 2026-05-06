@@ -5,7 +5,6 @@ go 1.26.0
 require (
 	charm.land/lipgloss/v2 v2.0.2
 	github.com/charmbracelet/colorprofile v0.4.2
-	github.com/jake-landersweb/previewctl v0.0.27
 	github.com/lib/pq v1.12.0
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/spf13/cobra v1.10.2
