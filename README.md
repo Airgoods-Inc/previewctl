@@ -331,4 +331,4 @@ The `.previewctl.json` manifest is written to the compute root during provisioni
 
 ## License
 
-[AGPL-3.0](LICENSE.txt)
+[MIT](LICENSE.txt)
