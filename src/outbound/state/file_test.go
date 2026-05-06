@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
 )
 
 func tempStatePath(t *testing.T) string {

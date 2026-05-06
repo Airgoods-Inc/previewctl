@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	filestate "github.com/jake-landersweb/previewctl/src/outbound/state"
+	filestate "github.com/Airgoods-Inc/previewctl/src/outbound/state"
 	"github.com/spf13/cobra"
 )
 

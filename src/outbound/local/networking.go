@@ -3,7 +3,7 @@ package local
 import (
 	"fmt"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
 )
 
 // NetworkingAdapter implements domain.NetworkingPort for local development.

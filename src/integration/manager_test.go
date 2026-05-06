@@ -12,10 +12,10 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
-	"github.com/jake-landersweb/previewctl/src/outbound/local"
-	filestate "github.com/jake-landersweb/previewctl/src/outbound/state"
-	"github.com/jake-landersweb/previewctl/src/testutil"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/outbound/local"
+	filestate "github.com/Airgoods-Inc/previewctl/src/outbound/state"
+	"github.com/Airgoods-Inc/previewctl/src/testutil"
 )
 
 // stubComputePort creates real directories (simulates worktrees without git).

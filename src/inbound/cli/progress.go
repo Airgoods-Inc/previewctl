@@ -13,8 +13,8 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
-	"github.com/jake-landersweb/previewctl/src/version"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/version"
 )
 
 var (

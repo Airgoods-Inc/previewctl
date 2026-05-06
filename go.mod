@@ -1,10 +1,11 @@
-module github.com/jake-landersweb/previewctl
+module github.com/Airgoods-Inc/previewctl
 
 go 1.26.0
 
 require (
 	charm.land/lipgloss/v2 v2.0.2
 	github.com/charmbracelet/colorprofile v0.4.2
+	github.com/jake-landersweb/previewctl v0.0.27
 	github.com/lib/pq v1.12.0
 	github.com/pressly/goose/v3 v3.27.0
 	github.com/spf13/cobra v1.10.2
@@ -42,7 +43,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.28.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/klauspost/compress v1.18.4 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
@@ -81,6 +82,8 @@ require (
 	go.opentelemetry.io/otel/trace v1.41.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
+	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/text v0.36.0 // indirect
+	google.golang.org/grpc v1.80.0 // indirect
 )

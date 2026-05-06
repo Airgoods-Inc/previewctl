@@ -7,7 +7,7 @@ previewctl manages isolated development and preview environments for your projec
 ## Install
 
 ```bash
-go install github.com/jake-landersweb/previewctl/src/cmd/previewctl@latest
+go install github.com/Airgoods-Inc/previewctl/src/cmd/previewctl@latest
 ```
 
 Verify the installation:

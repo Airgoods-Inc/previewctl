@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	githubRepo   = "jake-landersweb/previewctl"
+	githubRepo   = "Airgoods-Inc/previewctl"
 	checkTimeout = 2 * time.Second
 )
 

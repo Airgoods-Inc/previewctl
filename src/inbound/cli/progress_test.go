@@ -8,7 +8,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
 )
 
 // captureStderr redirects os.Stderr to a pipe, runs fn, and returns what was written.

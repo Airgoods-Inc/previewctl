@@ -27,7 +27,7 @@ make build
 ### With Go
 
 ```bash
-go install github.com/jake-landersweb/previewctl/src/cmd/previewctl@latest
+go install github.com/Airgoods-Inc/previewctl/src/cmd/previewctl@latest
 ```
 
 ## Quick start

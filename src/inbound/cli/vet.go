@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
 	"github.com/spf13/cobra"
 )
 

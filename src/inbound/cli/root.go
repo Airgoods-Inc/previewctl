@@ -8,10 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
-	"github.com/jake-landersweb/previewctl/src/outbound/local"
-	filestate "github.com/jake-landersweb/previewctl/src/outbound/state"
-	"github.com/jake-landersweb/previewctl/src/version"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/outbound/local"
+	filestate "github.com/Airgoods-Inc/previewctl/src/outbound/state"
+	"github.com/Airgoods-Inc/previewctl/src/version"
 	"github.com/spf13/cobra"
 )
 

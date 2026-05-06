@@ -11,7 +11,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/pressly/goose/v3"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
 )
 
 //go:embed migrations/*.sql

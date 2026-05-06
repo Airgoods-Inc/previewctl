@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
-	"github.com/jake-landersweb/previewctl/src/testutil"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
+	"github.com/Airgoods-Inc/previewctl/src/testutil"
 )
 
 func setupPostgresAdapter(t *testing.T) *PostgresStateAdapter {

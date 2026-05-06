@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/jake-landersweb/previewctl/src/domain"
-	filestate "github.com/jake-landersweb/previewctl/src/outbound/state"
+	"github.com/Airgoods-Inc/previewctl/src/domain"
+	filestate "github.com/Airgoods-Inc/previewctl/src/outbound/state"
 	"github.com/spf13/cobra"
 )
 

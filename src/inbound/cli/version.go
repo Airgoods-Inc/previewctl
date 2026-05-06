@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"github.com/jake-landersweb/previewctl/src/version"
+	"github.com/Airgoods-Inc/previewctl/src/version"
 	"github.com/spf13/cobra"
 )
 
