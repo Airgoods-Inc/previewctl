@@ -149,6 +149,8 @@ func (m *Manager) step(ctx context.Context, entry *EnvironmentEntry, opts StepOp
 				DurationMs: rec.DurationMs,
 				Error:      err.Error(),
 			})
+			entry.Status = StatusError
+			entry.UpdatedAt = time.Now()
 			_ = m.state.SetEnvironment(ctx, entry.Name, entry) // best-effort
 		}
 		return err
@@ -810,6 +812,15 @@ func (m *Manager) runProvisioner(ctx context.Context, envName, branch, baseBranc
 		if err := m.state.SetEnvironment(ctx, envName, entry); err != nil {
 			return nil, nil, nil, fmt.Errorf("saving initial state: %w", err)
 		}
+	} else if entry.Status == StatusError {
+		// Retry from a previously failed state — flip back to creating so
+		// list/status reflect that work is in progress again. The existing
+		// step checkpoints (StepCompleted) handle resuming from where it failed.
+		entry.Status = StatusCreating
+		entry.UpdatedAt = time.Now()
+		if err := m.state.SetEnvironment(ctx, envName, entry); err != nil {
+			return nil, nil, nil, fmt.Errorf("saving retry state: %w", err)
+		}
 	}
 
 	// Invalidate from a specific step if requested
@@ -1193,7 +1204,15 @@ func (m *Manager) runRunner(ctx context.Context, envName, branch string, ca Comp
 
 // ---------- Destroy ----------
 
-func (m *Manager) Destroy(ctx context.Context, envName string) error {
+// DestroyOptions configures Destroy behavior.
+type DestroyOptions struct {
+	// Force continues past destroy-hook failures and always removes the
+	// environment from the state store. Useful when the create lifecycle
+	// failed and left state in an inconsistent shape that hooks can't handle.
+	Force bool
+}
+
+func (m *Manager) Destroy(ctx context.Context, envName string, opts DestroyOptions) error {
 	m.progress.OnStep(StepEvent{Step: "load_state", Status: StepStarted, Message: "Loading environment state..."})
 	entry, err := m.state.GetEnvironment(ctx, envName)
 	if err != nil {
@@ -1206,6 +1225,19 @@ func (m *Manager) Destroy(ctx context.Context, envName string) error {
 		return err
 	}
 	m.progress.OnStep(StepEvent{Step: "load_state", Status: StepCompleted, Message: "Environment state loaded"})
+
+	// In force mode, hook failures are surfaced via stepSimple's StepFailed
+	// event but do not halt the destroy flow. The user has opted in to
+	// "remove this entry no matter what" — proceed to remove_state at the end.
+	maybeFail := func(err error, wrap string) error {
+		if err == nil {
+			return nil
+		}
+		if opts.Force {
+			return nil
+		}
+		return fmt.Errorf("%s: %w", wrap, err)
+	}
 
 	// Reconstruct ComputeAccess from state
 	var ca ComputeAccess
@@ -1233,7 +1265,9 @@ func (m *Manager) Destroy(ctx context.Context, envName string) error {
 				_, err := ca.VerboseExec(ctx, hook.Command, env)
 				return err
 			}); err != nil {
-			return fmt.Errorf("runner destroy hook: %w", err)
+			if e := maybeFail(err, "runner destroy hook"); e != nil {
+				return e
+			}
 		}
 	}
 
@@ -1251,39 +1285,58 @@ func (m *Manager) Destroy(ctx context.Context, envName string) error {
 				_, err := m.runCoreHook(ctx, svcName, "destroy", envName, entry.Ports, entry.Env)
 				return err
 			}); err != nil {
-			return fmt.Errorf("destroying provisioner service %s: %w", svcName, err)
+			if e := maybeFail(err, fmt.Sprintf("destroying provisioner service %s", svcName)); e != nil {
+				return e
+			}
 		}
 	}
 
 	// Compute destroy hook (remote) or worktree removal (local)
 	if m.config.Provisioner.Compute != nil && m.config.Provisioner.Compute.Destroy != "" {
-		destroyMsg := "Compute destroyed via hook"
-		if err := m.stepSimple(ctx, "destroy_compute_hook", "Destroying remote compute...", &destroyMsg, func() error {
-			m.progress.OnStep(StepEvent{Step: "destroy_compute_hook", Status: StepStreaming, Message: "Destroying remote compute..."})
-			env := m.buildHookEnv(envName, "", entry.Ports, entry.Env)
-			if entry.Compute != nil {
-				env = append(env,
-					fmt.Sprintf("PREVIEWCTL_VM_IP=%s", entry.Compute.Host),
-					fmt.Sprintf("PREVIEWCTL_SSH_USER=%s", entry.Compute.User),
-				)
+		// Skip when create_compute never completed — there is no VM to delete,
+		// and the hook script would fail because the GLOBAL_* outputs (VM_NAME,
+		// zone, etc.) and entry.Compute were never persisted.
+		if !entry.StepCompleted("create_compute") {
+			completeMsg := "No remote compute to destroy (create never completed)"
+			_ = m.stepSimple(ctx, "destroy_compute_hook",
+				"Destroying remote compute...",
+				&completeMsg,
+				func() error { return nil })
+		} else {
+			destroyMsg := "Compute destroyed via hook"
+			if err := m.stepSimple(ctx, "destroy_compute_hook", "Destroying remote compute...", &destroyMsg, func() error {
+				m.progress.OnStep(StepEvent{Step: "destroy_compute_hook", Status: StepStreaming, Message: "Destroying remote compute..."})
+				env := m.buildHookEnv(envName, "", entry.Ports, entry.Env)
+				if entry.Compute != nil {
+					env = append(env,
+						fmt.Sprintf("PREVIEWCTL_VM_IP=%s", entry.Compute.Host),
+						fmt.Sprintf("PREVIEWCTL_SSH_USER=%s", entry.Compute.User),
+					)
+				}
+				_, err := ExecuteCoreHook(ctx, m.config.Provisioner.Compute.Destroy, nil, env, m.projectRoot, m.progress.StderrWriter())
+				return err
+			}); err != nil {
+				if e := maybeFail(err, "compute destroy hook"); e != nil {
+					return e
+				}
 			}
-			_, err := ExecuteCoreHook(ctx, m.config.Provisioner.Compute.Destroy, nil, env, m.projectRoot, m.progress.StderrWriter())
-			return err
-		}); err != nil {
-			return fmt.Errorf("compute destroy hook: %w", err)
 		}
 	} else if entry.Compute != nil && entry.Compute.Type == "local" {
 		if entry.IsManagedWorktree() {
 			if err := m.stepSimple(ctx, "destroy_compute", "Removing worktree and stopping containers...", msg("Worktree and containers removed"), func() error {
 				return m.compute.Destroy(ctx, envName)
 			}); err != nil {
-				return fmt.Errorf("destroying compute resources: %w", err)
+				if e := maybeFail(err, "destroying compute resources"); e != nil {
+					return e
+				}
 			}
 		} else {
 			if err := m.stepSimple(ctx, "stop_infra", "Stopping infrastructure containers...", msg("Infrastructure containers stopped"), func() error {
 				return m.compute.Stop(ctx, envName)
 			}); err != nil {
-				return fmt.Errorf("stopping infrastructure: %w", err)
+				if e := maybeFail(err, "stopping infrastructure"); e != nil {
+					return e
+				}
 			}
 		}
 	}
@@ -1297,7 +1350,9 @@ func (m *Manager) Destroy(ctx context.Context, envName string) error {
 			}
 			return nil
 		}); err != nil {
-			return fmt.Errorf("cleaning up env files: %w", err)
+			if e := maybeFail(err, "cleaning up env files"); e != nil {
+				return e
+			}
 		}
 	}
 

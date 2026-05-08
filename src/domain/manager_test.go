@@ -247,7 +247,7 @@ func TestManager_Destroy_CallOrder(t *testing.T) {
 	// Reset tracker to only capture destroy calls
 	tracker.calls = nil
 
-	err := mgr.Destroy(ctx, "feat-auth")
+	err := mgr.Destroy(ctx, "feat-auth", DestroyOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -286,7 +286,7 @@ func TestManager_Destroy_AttachedWorktree(t *testing.T) {
 
 	tracker.calls = nil
 
-	err := mgr.Destroy(ctx, "attached-env")
+	err := mgr.Destroy(ctx, "attached-env", DestroyOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -315,7 +315,7 @@ func TestManager_Destroy_NotFound(t *testing.T) {
 	mgr, _, _ := newTestManager(tracker)
 	ctx := context.Background()
 
-	err := mgr.Destroy(ctx, "nonexistent")
+	err := mgr.Destroy(ctx, "nonexistent", DestroyOptions{})
 	if err == nil {
 		t.Fatal("expected error for nonexistent environment")
 	}
@@ -531,7 +531,7 @@ func TestManager_Destroy_WithCoreServices(t *testing.T) {
 	}
 
 	tracker.calls = nil
-	err := mgr.Destroy(ctx, "feat-db")
+	err := mgr.Destroy(ctx, "feat-db", DestroyOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

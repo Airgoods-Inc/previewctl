@@ -280,7 +280,7 @@ func TestIntegration_FullLifecycleWithCoreHooks(t *testing.T) {
 	}
 
 	// Destroy — should drop the cloned database
-	if err := mgr.Destroy(ctx, "feat-auth"); err != nil {
+	if err := mgr.Destroy(ctx, "feat-auth", domain.DestroyOptions{}); err != nil {
 		t.Fatalf("Destroy failed: %v", err)
 	}
 
@@ -322,7 +322,7 @@ func TestIntegration_MultipleEnvironments(t *testing.T) {
 	}
 
 	// Destroy one
-	if err := mgr.Destroy(ctx, "env-one"); err != nil {
+	if err := mgr.Destroy(ctx, "env-one", domain.DestroyOptions{}); err != nil {
 		t.Fatalf("Destroy env-one failed: %v", err)
 	}
 
