@@ -245,3 +245,54 @@ func TestPostgresStateAdapter_UpsertOverwrites(t *testing.T) {
 		t.Errorf("expected status 'stopped', got '%s'", got.Status)
 	}
 }
+
+func TestPostgresStateAdapter_Activity(t *testing.T) {
+	adapter := setupPostgresAdapter(t)
+	ctx := context.Background()
+
+	stateUpdatedAt := time.Now().Add(-3 * time.Hour).Truncate(time.Second)
+	entry := &domain.EnvironmentEntry{
+		Name:      "env",
+		Mode:      domain.ModePreview,
+		Branch:    "main",
+		Status:    domain.StatusRunning,
+		CreatedAt: stateUpdatedAt,
+		UpdatedAt: stateUpdatedAt,
+	}
+	if err := adapter.SetEnvironment(ctx, "env", entry); err != nil {
+		t.Fatalf("SetEnvironment: %v", err)
+	}
+
+	proxyAt := stateUpdatedAt.Add(1 * time.Hour)
+	if err := adapter.RecordProxyActivity(ctx, "env", proxyAt, "env--web.preview.example.com", 200); err != nil {
+		t.Fatalf("RecordProxyActivity: %v", err)
+	}
+
+	// Older writes should not move the activity timestamp backwards.
+	if err := adapter.RecordProxyActivity(ctx, "env", proxyAt.Add(-30*time.Minute), "older.example.com", 404); err != nil {
+		t.Fatalf("RecordProxyActivity older: %v", err)
+	}
+
+	cliAt := stateUpdatedAt.Add(2 * time.Hour)
+	if err := adapter.RecordCLIActivity(ctx, "env", cliAt, "previewctl status", "jake", "laptop"); err != nil {
+		t.Fatalf("RecordCLIActivity: %v", err)
+	}
+
+	activities, err := adapter.ListEnvironmentActivity(ctx)
+	if err != nil {
+		t.Fatalf("ListEnvironmentActivity: %v", err)
+	}
+	if len(activities) != 1 {
+		t.Fatalf("expected 1 activity row, got %d", len(activities))
+	}
+	activity := activities[0]
+	if activity.LastProxyAccessAt == nil || !activity.LastProxyAccessAt.Equal(proxyAt) {
+		t.Fatalf("expected proxy activity %s, got %v", proxyAt, activity.LastProxyAccessAt)
+	}
+	if activity.LastCLIAccessAt == nil || !activity.LastCLIAccessAt.Equal(cliAt) {
+		t.Fatalf("expected cli activity %s, got %v", cliAt, activity.LastCLIAccessAt)
+	}
+	if activity.LastActivityAt.Before(cliAt) {
+		t.Fatalf("expected combined activity to be at least %s, got %s", cliAt, activity.LastActivityAt)
+	}
+}

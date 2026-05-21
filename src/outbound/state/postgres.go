@@ -26,6 +26,15 @@ type PostgresStateAdapter struct {
 	project string
 }
 
+type EnvironmentActivity struct {
+	Project           string
+	Name              string
+	LastProxyAccessAt *time.Time
+	LastCLIAccessAt   *time.Time
+	StateUpdatedAt    time.Time
+	LastActivityAt    time.Time
+}
+
 // NewPostgresStateAdapter creates a new Postgres-backed state adapter.
 // The dsn should be a valid PostgreSQL connection string.
 // The project name scopes state so multiple projects can share one database.
@@ -170,6 +179,110 @@ func (a *PostgresStateAdapter) RemoveEnvironment(ctx context.Context, name strin
 		return fmt.Errorf("deleting environment '%s': %w", name, err)
 	}
 	return nil
+}
+
+func (a *PostgresStateAdapter) RecordProxyActivity(ctx context.Context, name string, accessedAt time.Time, host string, status int) error {
+	_, err := a.db.ExecContext(ctx, `
+		INSERT INTO environment_proxy_activity (project, name, last_access_at, last_host, last_status, updated_at)
+		VALUES ($1, $2, $3, $4, $5, now())
+		ON CONFLICT (project, name)
+		DO UPDATE SET
+			last_access_at = GREATEST(environment_proxy_activity.last_access_at, EXCLUDED.last_access_at),
+			last_host = CASE
+				WHEN EXCLUDED.last_access_at >= environment_proxy_activity.last_access_at THEN EXCLUDED.last_host
+				ELSE environment_proxy_activity.last_host
+			END,
+			last_status = CASE
+				WHEN EXCLUDED.last_access_at >= environment_proxy_activity.last_access_at THEN EXCLUDED.last_status
+				ELSE environment_proxy_activity.last_status
+			END,
+			updated_at = now()
+	`, a.project, name, accessedAt, host, status)
+	if err != nil {
+		return fmt.Errorf("recording proxy activity for '%s': %w", name, err)
+	}
+	return nil
+}
+
+func (a *PostgresStateAdapter) RecordCLIActivity(ctx context.Context, name string, accessedAt time.Time, command, actor, machine string) error {
+	_, err := a.db.ExecContext(ctx, `
+		INSERT INTO environment_cli_activity (project, name, last_access_at, last_command, last_actor, last_machine, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, now())
+		ON CONFLICT (project, name)
+		DO UPDATE SET
+			last_access_at = GREATEST(environment_cli_activity.last_access_at, EXCLUDED.last_access_at),
+			last_command = CASE
+				WHEN EXCLUDED.last_access_at >= environment_cli_activity.last_access_at THEN EXCLUDED.last_command
+				ELSE environment_cli_activity.last_command
+			END,
+			last_actor = CASE
+				WHEN EXCLUDED.last_access_at >= environment_cli_activity.last_access_at THEN EXCLUDED.last_actor
+				ELSE environment_cli_activity.last_actor
+			END,
+			last_machine = CASE
+				WHEN EXCLUDED.last_access_at >= environment_cli_activity.last_access_at THEN EXCLUDED.last_machine
+				ELSE environment_cli_activity.last_machine
+			END,
+			updated_at = now()
+	`, a.project, name, accessedAt, command, actor, machine)
+	if err != nil {
+		return fmt.Errorf("recording cli activity for '%s': %w", name, err)
+	}
+	return nil
+}
+
+func (a *PostgresStateAdapter) ListEnvironmentActivity(ctx context.Context) ([]EnvironmentActivity, error) {
+	rows, err := a.db.QueryContext(ctx, `
+		SELECT
+			e.project,
+			e.name,
+			pa.last_access_at AS last_proxy_access_at,
+			ca.last_access_at AS last_cli_access_at,
+			e.updated_at AS state_updated_at,
+			GREATEST(
+				COALESCE(pa.last_access_at, '-infinity'::timestamptz),
+				COALESCE(ca.last_access_at, '-infinity'::timestamptz),
+				e.updated_at
+			) AS last_activity_at
+		FROM environments e
+		LEFT JOIN environment_proxy_activity pa
+			ON pa.project = e.project AND pa.name = e.name
+		LEFT JOIN environment_cli_activity ca
+			ON ca.project = e.project AND ca.name = e.name
+		WHERE e.project = $1 AND e.is_deleted = false
+		ORDER BY e.name
+	`, a.project)
+	if err != nil {
+		return nil, fmt.Errorf("querying environment activity: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var activities []EnvironmentActivity
+	for rows.Next() {
+		var activity EnvironmentActivity
+		var proxyAt, cliAt sql.NullTime
+		if err := rows.Scan(
+			&activity.Project,
+			&activity.Name,
+			&proxyAt,
+			&cliAt,
+			&activity.StateUpdatedAt,
+			&activity.LastActivityAt,
+		); err != nil {
+			return nil, fmt.Errorf("scanning environment activity: %w", err)
+		}
+		if proxyAt.Valid {
+			activity.LastProxyAccessAt = &proxyAt.Time
+		}
+		if cliAt.Valid {
+			activity.LastCLIAccessAt = &cliAt.Time
+		}
+		activities = append(activities, activity)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating environment activity: %w", err)
+	}
+	return activities, nil
 }
 
 // Close closes the underlying database connection.

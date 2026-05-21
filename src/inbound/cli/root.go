@@ -42,6 +42,9 @@ func Execute() {
 			initOutputMode(globalCI, globalVerbose)
 			return loadEnvFiles(globalEnvFiles)
 		},
+		PersistentPostRun: func(cmd *cobra.Command, args []string) {
+			recordCLIActivityBestEffort(cmd)
+		},
 		Run: func(cmd *cobra.Command, args []string) {
 			if v, _ := cmd.Flags().GetBool("version"); v {
 				runVersionCheck()
