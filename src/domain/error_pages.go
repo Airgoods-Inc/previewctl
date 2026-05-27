@@ -70,9 +70,9 @@ func GenerateErrorPages(envName string) map[string][]byte {
 			Heading:     "Service Unavailable",
 			Description: "The service is started but not responding. It may still be booting, or it may have crashed.",
 			Actions: []errorPageAction{
-				{"Check the logs:", "previewctl -e " + envName + " env service logs"},
+				{"Check the logs:", "previewctl -e " + envName + " service logs <service>"},
 			},
-			Hint: "If the service keeps crashing, try: previewctl -e " + envName + " env service restart",
+			Hint: "If the service keeps crashing, try: previewctl -e " + envName + " service restart <service>",
 		}),
 
 		"previewctl_503.html": renderErrorPage(errorPageData{
@@ -82,7 +82,7 @@ func GenerateErrorPages(envName string) map[string][]byte {
 			Heading:     "Service Not Started",
 			Description: "This service exists in environment " + envName + " but has not been started yet.",
 			Actions: []errorPageAction{
-				{"Start it with:", "previewctl -e " + envName + " env service start <service>"},
+				{"Start it with:", "previewctl -e " + envName + " service start <service>"},
 			},
 		}),
 
@@ -93,7 +93,7 @@ func GenerateErrorPages(envName string) map[string][]byte {
 			Heading:     "Unknown Service",
 			Description: "No service matches this subdomain in environment " + envName + ".",
 			Actions: []errorPageAction{
-				{"List available services:", "previewctl -e " + envName + " env service list"},
+				{"List available services:", "previewctl -e " + envName + " service list"},
 			},
 		}),
 	}
